@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>rest-db-proxy admin</title>
+</head>
+<body>
+<h3>
+  NOTICE: All params will be treated as json, so string params should be written like "abc"(with double quotation marks)
+</h3>
+<form id="form" target="_blank" method="get">
+  <label>apiKey:
+    <input id="apiKey" name="_apiKey" style="width: 300px">
+  </label>
+  <br/>
+  <br/>
+  <label>verticle name to be redeployed. if not set, list all running verticles<br/>
+    <input id="verticleName" name="verticleName" style="width: 300px">
+  </label>
+  <br/>
+  <br/>
+  <div>
+    <button type="submit" style="width: 90%; height: 50px; text-align: center"
+            onclick="return beforeDeploy()">
+      submit
+    </button>
+  </div>
+  <br/>
+  <br/>
+  <label>execute sql manually:<br/>
+    <textarea id="sql" name="sql" rows="20" style="width: 90%"></textarea>
+  </label>
+  <br/>
+  <br/>
+  <div>
+    <button type="submit" style="width: 90%; height: 50px; text-align: center"
+            onclick="return beforeExecSql()">
+      submit
+    </button>
+  </div>
+</form>
+</body>
+<script>
+  const STORE_KEY = 'rest-db-proxy.apiKey'
+  document.getElementById('apiKey').value = localStorage.getItem(STORE_KEY) || ''
+
+  const form = document.getElementById('form')
+
+  function checkApiKey() {
+    const apiKeyInput = document.getElementById('apiKey')
+    const apiKey = apiKeyInput.value
+    if (apiKey && apiKey !== '""') {
+      localStorage.setItem(STORE_KEY, apiKey)
+      return true
+    } else {
+      alert('apiKey should not be empty')
+      return false
+    }
+  }
+
+  function beforeExecSql() {
+    form.action = './manualSql' // see ManualSqlVerticle.path
+    if (checkApiKey()) {
+      const sqlInput = document.getElementById('sql')
+      const sql = sqlInput.value
+      if (sql) {
+        return true
+      } else {
+        alert('sql should not be empty')
+        return false
+      }
+    } else return false
+  }
+
+  function beforeDeploy() {
+    form.action = './_admin/deploy'
+    return checkApiKey()
+  }
+</script>
+</html>
