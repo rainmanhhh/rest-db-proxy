@@ -2,7 +2,7 @@ package ez.rest_db_proxy.handlers
 
 import ez.rest_db_proxy.err.HttpException
 import ez.rest_db_proxy.message.BusiMessage
-import ez.rest_db_proxy.toJson
+import ez.rest_db_proxy.paramsAsJson
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
@@ -20,7 +20,7 @@ class SqlHandler(
     if (ctx.response().ended()) return false
     val eb = ctx.vertx().eventBus()
     val address = ctx.normalizedPath()
-    val paramJson = ctx.queryParams().toJson()
+    val paramJson = ctx.paramsAsJson()
     val resBody = eb.request<JsonObject>(address, paramJson).await().body()
     val resMessage = BusiMessage(resBody)
     if (!resMessage.isSuccess()) {
@@ -47,12 +47,14 @@ class SqlHandler(
   }
 
   private suspend fun executeSql(ctx: RoutingContext, sql: String) =
-    if (isQuery(sql)) {
-      val rowSet =
-        SqlTemplate.forQuery(dbClient, sql).execute(ctx.queryParams().toJson().map).await()
-      rowSet.map { it.toJson() }
-    } else {
-      SqlTemplate.forUpdate(dbClient, sql).execute(ctx.queryParams().toJson().map).await()
-      emptyList()
+    ctx.paramsAsJson().map.let { paramMap ->
+      if (isQuery(sql)) {
+        SqlTemplate.forQuery(dbClient, sql).execute(paramMap)
+          .await()
+          .map { it.toJson() }
+      } else {
+        SqlTemplate.forUpdate(dbClient, sql).execute(paramMap).await()
+        emptyList()
+      }
     }
 }

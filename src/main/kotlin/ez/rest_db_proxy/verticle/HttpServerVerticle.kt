@@ -5,7 +5,7 @@ import ez.rest_db_proxy.Config
 import ez.rest_db_proxy.handlers.DeployHandler
 import ez.rest_db_proxy.handlers.SqlHandler
 import ez.rest_db_proxy.message.BusiMessage
-import ez.rest_db_proxy.toJson
+import ez.rest_db_proxy.paramsAsJson
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServer
@@ -56,9 +56,9 @@ class HttpServerVerticle : CoroutineVerticle() {
     router.post().handler(BodyHandler.create())
     router.get("/favicon.ico").handler(FaviconHandler.create(vertx))
     router.get("/").handler(this::handleAdminHtml)
-    router.get("/_admin/deploy").handler(DeployHandler(this))
-    router.get("/_admin/*").handler(this::handleAdmin)
-    router.get().handler(SqlHandler(this, dbClient)).failureHandler(this::handleError)
+    router.post("/_admin/deploy").handler(DeployHandler(this))
+    router.post("/_admin/*").handler(this::handleAdmin)
+    router.route().handler(SqlHandler(this, dbClient)).failureHandler(this::handleError)
     val server = httpServer.requestHandler(router).listen().await()
     logger.info("httpServer started at {}", server.actualPort())
   }
@@ -73,7 +73,7 @@ class HttpServerVerticle : CoroutineVerticle() {
   private fun handleAdmin(ctx: RoutingContext) = launch {
     val eb = ctx.vertx().eventBus()
     val address = ctx.normalizedPath()
-    val jsonParams = ctx.queryParams().toJson()
+    val jsonParams = ctx.paramsAsJson()
     ApiKey.check(jsonParams)
     val res = eb.request<String>(address, jsonParams).await().body()
     ctx.response().end(res)

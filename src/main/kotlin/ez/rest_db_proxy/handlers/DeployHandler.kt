@@ -1,7 +1,7 @@
 package ez.rest_db_proxy.handlers
 
 import ez.rest_db_proxy.ApiKey
-import ez.rest_db_proxy.toJson
+import ez.rest_db_proxy.paramsAsJson
 import io.vertx.core.Vertx
 import io.vertx.core.json.Json
 import io.vertx.ext.web.RoutingContext
@@ -56,7 +56,7 @@ class DeployHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
 
   override suspend fun handleAsync(ctx: RoutingContext): Boolean {
     val vertx = ctx.vertx()
-    val jsonParams = ctx.queryParams().toJson()
+    val jsonParams = ctx.paramsAsJson()
     ApiKey.check(jsonParams)
     val verticleName = jsonParams.getString("verticleName")
     if (verticleName.isNullOrBlank()) {
