@@ -7,7 +7,7 @@ import ez.rest_db_proxy.message.res.StringRes
 import ez.rest_db_proxy.message.res.check
 import ez.rest_db_proxy.message.sendMessage
 import ez.rest_db_proxy.paramsAsJson
-import ez.rest_db_proxy.verticle.DbClientVerticle
+import ez.rest_db_proxy.db.DbClientVerticle
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.ext.web.RoutingContext
@@ -16,8 +16,8 @@ import kotlinx.coroutines.CoroutineScope
 import org.slf4j.LoggerFactory
 
 /**
- * - send message to [ez.rest_db_proxy.verticle.GenerateSqlVerticle] to get sql template
- * - send message to [ez.rest_db_proxy.verticle.DbClientVerticle] to execute sql
+ * - send message to [ez.rest_db_proxy.db.GenerateSqlVerticle] to get sql template
+ * - send message to [ez.rest_db_proxy.db.DbClientVerticle] to execute sql
  */
 class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
   companion object {

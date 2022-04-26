@@ -1,4 +1,4 @@
-package ez.rest_db_proxy.verticle
+package ez.rest_db_proxy.db
 
 import ez.rest_db_proxy.message.receiveMessage
 import ez.rest_db_proxy.message.res.StringRes

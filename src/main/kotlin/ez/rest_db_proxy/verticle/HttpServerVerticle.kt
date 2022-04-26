@@ -1,11 +1,12 @@
 package ez.rest_db_proxy.verticle
 
 import ez.rest_db_proxy.ApiKey
-import ez.rest_db_proxy.Config
 import ez.rest_db_proxy.handlers.DeployHandler
 import ez.rest_db_proxy.handlers.SqlHandler
 import ez.rest_db_proxy.message.res.SimpleRes
 import ez.rest_db_proxy.paramsAsJson
+import ez.rest_db_proxy.config.ConfigVerticle
+import ez.rest_db_proxy.config.HttpServerConfig
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServer
@@ -16,34 +17,33 @@ import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.FaviconHandler
 import io.vertx.ext.web.handler.LoggerHandler
 import io.vertx.ext.web.handler.TimeoutHandler
-import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.await
-import io.vertx.sqlclient.Pool
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
-class HttpServerVerticle : CoroutineVerticle() {
+class HttpServerVerticle : ConfigVerticle<HttpServerConfig>() {
   companion object {
     private val logger = LoggerFactory.getLogger(HttpServerVerticle::class.java)!!
     private val adminHtml = HttpServerVerticle::class.java.getResource("/admin.html").readText()
   }
 
-  private lateinit var cfg: Config
+  override val key = "httpServer"
+
+  override var configValue = HttpServerConfig()
+
   private lateinit var httpServer: HttpServer
   private lateinit var router: Router
-  private lateinit var dbClient: Pool
 
-  override suspend fun start() {
-    cfg = Config.instance
+  override suspend fun afterConfig() {
+    HttpServerConfig.value = configValue
     createBeans()
     startHttpServer()
   }
 
   private fun createBeans() {
     logger.info("creating beans...")
-    httpServer = vertx.createHttpServer(cfg.httpServer)
+    httpServer = vertx.createHttpServer(configValue)
     router = Router.router(vertx)
-    dbClient = Pool.pool(vertx, cfg.db.connect, cfg.db.pool)
     logger.info("beans created")
   }
 
@@ -52,7 +52,7 @@ class HttpServerVerticle : CoroutineVerticle() {
    */
   private suspend fun startHttpServer() {
     logger.info("starting httpServer...")
-    router.route().handler(TimeoutHandler.create(cfg.timeout))
+    router.route().handler(TimeoutHandler.create(configValue.timeout))
     router.route().handler(LoggerHandler.create())
     router.post().handler(BodyHandler.create())
     router.get("/favicon.ico").handler(FaviconHandler.create(vertx))
@@ -92,7 +92,7 @@ class HttpServerVerticle : CoroutineVerticle() {
       ?: HttpResponseStatus.valueOf(statusCode).reasonPhrase()
     ctx.response()
       .setStatusCode(
-        if (Config.instance.alwaysUseOkStatus) HttpResponseStatus.OK.code()
+        if (configValue.alwaysUseOkStatus) HttpResponseStatus.OK.code()
         else statusCode
       )
       .putHeader(HttpHeaders.CONTENT_TYPE, "application/json;charset=utf-8")
