@@ -1,25 +1,14 @@
-package ez.rest_db_proxy.message
+package ez.rest_db_proxy.message.res
 
 import ez.rest_db_proxy.err.HttpException
 import io.netty.handler.codec.http.HttpResponseStatus
-import io.vertx.core.json.JsonObject
 
-class BusiMessage() : JsonObject() {
-  var code: Int? by map
+open class SimpleRes<Data>() {
+  var code: Int? = null
 
-  var message: String? by map
+  var message: String? = null
 
-  var data: String?
-    get() = getString("data")
-    set(value) {
-      put("data", value)
-    }
-
-  constructor(jsonObject: JsonObject) : this() {
-    code = jsonObject.getInteger("code")
-    message = jsonObject.getString("message")
-    data = jsonObject.getString("data")
-  }
+  open var data: Data? = null
 
   constructor(e: Throwable) : this() {
     if (e is HttpException) {
@@ -29,6 +18,11 @@ class BusiMessage() : JsonObject() {
       code = HttpResponseStatus.INTERNAL_SERVER_ERROR.code()
       message = e.message
     }
+  }
+
+  constructor(code: Int?, message: String?) : this() {
+    this.code = code
+    this.message = message
   }
 
   fun isSuccess(): Boolean {
@@ -42,3 +36,5 @@ class BusiMessage() : JsonObject() {
     return HttpException(c, m)
   }
 }
+
+fun <Data> SimpleRes<Data>.check() = if (isSuccess()) data else throw toError()

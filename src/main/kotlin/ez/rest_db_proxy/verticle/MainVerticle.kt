@@ -22,6 +22,7 @@ import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.await
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.util.ServiceLoader
 
 class MainVerticle : CoroutineVerticle() {
   companion object {
@@ -40,12 +41,15 @@ class MainVerticle : CoroutineVerticle() {
     readConfig()
     val cfg = Config.instance
     val newVertx = Vertx.vertx(cfg.vertx)
+    for (verticle in ServiceLoader.load(AutoDeployVerticle::class.java)) {
+      logger.info("deploy AutoDeployVerticle: {}", verticle)
+      newVertx.deployVerticle(verticle)
+    }
     newVertx.deployVerticle(
       HttpServerVerticle::class.java,
       DeploymentOptions()
         .setInstances(cfg.vertx.eventLoopPoolSize)
     ).await()
-    newVertx.deployVerticle(ManualSqlVerticle()).await()
     DeployHandler.deployDir(newVertx, cfg.verticleRoot)
     vertx.close {
       logger.info("launcher vertx instance closed")

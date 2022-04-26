@@ -4,11 +4,12 @@ import ez.rest_db_proxy.ApiKey
 import ez.rest_db_proxy.Config
 import ez.rest_db_proxy.handlers.DeployHandler
 import ez.rest_db_proxy.handlers.SqlHandler
-import ez.rest_db_proxy.message.BusiMessage
+import ez.rest_db_proxy.message.res.SimpleRes
 import ez.rest_db_proxy.paramsAsJson
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServer
+import io.vertx.core.json.Json
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
@@ -58,7 +59,7 @@ class HttpServerVerticle : CoroutineVerticle() {
     router.get("/").handler(this::handleAdminHtml)
     router.post("/_admin/deploy").handler(DeployHandler(this))
     router.post("/_admin/*").handler(this::handleAdmin)
-    router.route().handler(SqlHandler(this, dbClient)).failureHandler(this::handleError)
+    router.route().handler(SqlHandler(this)).failureHandler(this::handleError)
     val server = httpServer.requestHandler(router).listen().await()
     logger.info("httpServer started at {}", server.actualPort())
   }
@@ -95,10 +96,7 @@ class HttpServerVerticle : CoroutineVerticle() {
         else statusCode
       )
       .putHeader(HttpHeaders.CONTENT_TYPE, "application/json;charset=utf-8")
-      .end(BusiMessage().also {
-        it.code = statusCode
-        it.message = message
-      }.toBuffer())
+      .end(Json.encodeToBuffer(SimpleRes<Any>(statusCode, message)))
       .await()
   }
 }
