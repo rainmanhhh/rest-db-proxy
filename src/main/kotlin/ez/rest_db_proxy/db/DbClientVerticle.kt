@@ -1,15 +1,12 @@
 package ez.rest_db_proxy.db
 
+import ez.rest_db_proxy.config.ConfigVerticle
 import ez.rest_db_proxy.message.receiveMessage
 import ez.rest_db_proxy.message.req.SqlReq
-import ez.rest_db_proxy.message.res.ListRes
 import ez.rest_db_proxy.verticle.AutoDeployVerticle
-import ez.rest_db_proxy.config.ConfigVerticle
-import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.await
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.templates.SqlTemplate
-import kotlinx.coroutines.launch
 
 abstract class DbClientVerticle<C : Any> : AutoDeployVerticle, ConfigVerticle<C>() {
   private lateinit var dbClient: SqlClient
@@ -18,29 +15,26 @@ abstract class DbClientVerticle<C : Any> : AutoDeployVerticle, ConfigVerticle<C>
 
   override suspend fun afterConfig() {
     dbClient = createDbClient()
-    receiveMessage(messageExecuteSql, SqlReq::class.java) { req, message ->
-      launch {
-        val list = executeSql(req)
-        val r = ListRes(list)
-        message.reply(JsonObject.mapFrom(r))
-      }
+    receiveMessage(messageExecuteSql, SqlReq::class.java) {
+      executeSql(it)
     }
   }
 
   private fun isQuery(s: String): Boolean {
     val first = s.lines().first {
-      !it.startsWith("--") && it.isNotBlank()
+      val trimmed = it.trim()
+      !trimmed.startsWith("--") && trimmed.isNotEmpty()
     }
     return first.trimStart().lowercase().startsWith("select")
   }
 
   private suspend fun executeSql(req: SqlReq) =
     if (isQuery(req.sql)) {
-      SqlTemplate.forQuery(dbClient, req.sql).execute(req.params.map)
+      SqlTemplate.forQuery(dbClient, req.sql).execute(req.params)
         .await()
         .map { it.toJson() }
     } else {
-      SqlTemplate.forUpdate(dbClient, req.sql).execute(req.params.map).await()
+      SqlTemplate.forUpdate(dbClient, req.sql).execute(req.params).await()
       emptyList()
     }
 

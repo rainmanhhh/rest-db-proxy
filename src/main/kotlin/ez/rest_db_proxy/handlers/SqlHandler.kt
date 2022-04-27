@@ -36,7 +36,7 @@ class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
     } else {
       val jsonArray = sendMessage(
         DbClientVerticle.messageExecuteSql,
-        SqlReq(sql, paramJson),
+        SqlReq(sql, paramJson.map),
         ListRes::class.java
       ).check()
       ctx.response().putHeader(

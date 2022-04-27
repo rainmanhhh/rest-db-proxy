@@ -1,11 +1,12 @@
 package ez.rest_db_proxy.message
 
 import ez.rest_db_proxy.VertxUtil
-import ez.rest_db_proxy.err.HttpException
 import ez.rest_db_proxy.message.res.SimpleRes
 import io.vertx.core.eventbus.Message
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.await
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 object MessageEx {
@@ -36,46 +37,45 @@ suspend fun <Req, Res : SimpleRes<*>> sendMessage(
 /**
  * @param reqClass should be an object class which can be mapped from a [JsonObject]
  */
-fun <Req> receiveMessage(
+fun <Req> CoroutineScope.receiveMessage(
   address: String,
   reqClass: Class<Req>,
-  handler: (req: Req, message: Message<JsonObject>) -> Unit
+  handler: suspend (req: Req) -> Any?
 ) {
   MessageEx.logger.debug("register message handler for address: {}", address)
   val vertx = VertxUtil.vertx()
-//  coroutineScope {
   vertx.eventBus().consumer<JsonObject>(address) {
-    MessageEx.logger.debug("received message at address: {}, req: {}", address, it.body())
+    if (MessageEx.logger.isDebugEnabled) {
+      MessageEx.logger.debug("received message at address: {}, req: {}", address, it.body())
+    }
     handleReq(it, it.body().mapTo(reqClass), handler)
   }
-//  }
 }
 
-fun receiveMessage(
+fun CoroutineScope.receiveMessage(
   address: String,
-  handler: (req: JsonObject, message: Message<JsonObject>) -> Unit
+  handler: suspend (req: JsonObject) -> Any?
 ) {
   MessageEx.logger.debug("register message handler for address: {}", address)
   val vertx = VertxUtil.vertx()
-//  coroutineScope {
   vertx.eventBus().consumer<JsonObject>(address) {
     MessageEx.logger.debug("received message at address: {}, req: {}", address, it.body())
     handleReq(it, it.body(), handler)
   }
-//  }
 }
 
-private fun <Req> handleReq(
+private fun <Req> CoroutineScope.handleReq(
   message: Message<JsonObject>,
   req: Req,
-  handler: (req: Req, message: Message<JsonObject>) -> Unit
+  handler: suspend (req: Req) -> Any?
 ) {
-//  launch {
-  try {
-    handler(req, message)
-  } catch (e: Throwable) {
-    if (e !is HttpException) MessageEx.logger.error("message handler error", e)
-    message.reply(SimpleRes<Any>(e))
+  launch {
+    try {
+      val resBody = handler(req)
+      message.reply(JsonObject.mapFrom(SimpleRes<Any>().apply { data = resBody }))
+    } catch (e: Throwable) {
+      MessageEx.logger.error("message handler error", e)
+      message.reply(SimpleRes.fromError(e))
+    }
   }
-//  }
 }

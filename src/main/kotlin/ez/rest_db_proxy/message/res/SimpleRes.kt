@@ -35,6 +35,10 @@ open class SimpleRes<Data>() {
     val m = message ?: HttpResponseStatus.valueOf(c).reasonPhrase()
     return HttpException(c, m)
   }
+
+  companion object {
+    fun fromError(e: Throwable) = SimpleRes<Any>(e)
+  }
 }
 
 fun <Data> SimpleRes<Data>.check() = if (isSuccess()) data else throw toError()
