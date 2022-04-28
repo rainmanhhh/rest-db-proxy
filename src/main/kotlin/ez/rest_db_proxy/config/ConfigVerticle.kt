@@ -1,7 +1,5 @@
 package ez.rest_db_proxy.config
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.github.victools.jsonschema.generator.OptionPreset
 import com.github.victools.jsonschema.generator.SchemaGenerator
@@ -13,9 +11,11 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.await
+import org.slf4j.LoggerFactory
 
 abstract class ConfigVerticle<ConfigType : Any> : AutoDeployVerticle, CoroutineVerticle() {
   companion object {
+    private val logger = LoggerFactory.getLogger(ConfigVerticle::class.java)
     private val configMap = HashMap<String, Any>()
 
     @JvmStatic
@@ -29,7 +29,12 @@ abstract class ConfigVerticle<ConfigType : Any> : AutoDeployVerticle, CoroutineV
   abstract var configValue: ConfigType
 
   final override suspend fun start() {
-    generateConfigSchema(ConfigLoaderVerticle.configDir, "$key.schema.json")
+    try {
+      logger.debug("generate json schema for [{}]", key)
+      generateConfigSchema(ConfigLoaderVerticle.configDir, "$key.schema.json")
+    } catch (e: Throwable) {
+      logger.warn("generate json schema for [{}] failed", key, e)
+    }
     val configJson = ConfigLoaderVerticle.configJson.getJsonObject(key, JsonObject())
     configValue = configJson.mapTo(configValue.javaClass)
     configMap[key] = configValue
@@ -38,14 +43,25 @@ abstract class ConfigVerticle<ConfigType : Any> : AutoDeployVerticle, CoroutineV
 
   abstract suspend fun afterConfig()
 
+  private fun ObjectNode.getObj(childName: String) =
+    get(childName) as ObjectNode? ?: putObject(childName)
+
   private suspend fun generateConfigSchema(configDir: String, fileName: String) {
     val configBuilder =
-      SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2019_09, OptionPreset.PLAIN_JSON)
+      SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_7, OptionPreset.PLAIN_JSON)
     val config = configBuilder.build()
     val generator = SchemaGenerator(config)
-    val jsonSchema: JsonNode = generator.generateSchema(javaClass)
-    val rootNode = ObjectNode(JsonNodeFactory.instance, mapOf(key to jsonSchema))
-    val configSchemaStr = rootNode.toPrettyString()
+    val jsonSchema = generator.generateSchema(configValue.javaClass)
+
+    val defsNode = jsonSchema.getObj("definitions")
+    defsNode.putObject(configValue.javaClass.name)
+      .put("type", "object")
+      .putPOJO("properties", jsonSchema.getObj("properties"))
+    jsonSchema.putObject("properties")
+      .putObject(key)
+      .put("\$ref", "#/definitions/" + configValue.javaClass.name)
+
+    val configSchemaStr = jsonSchema.toPrettyString()
     val vertx = VertxUtil.vertx()
     val schemaDir = "$configDir/schema"
     vertx.fileSystem().mkdirs(schemaDir)

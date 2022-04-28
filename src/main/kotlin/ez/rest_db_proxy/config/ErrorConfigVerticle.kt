@@ -10,7 +10,7 @@ class ErrorConfigVerticle : ConfigVerticle<ErrorConfig>() {
 
 class ErrorConfig {
   companion object {
-    lateinit var value: ErrorConfig
+    var value: ErrorConfig = ErrorConfig()
   }
 
   var message = ErrorMessageConfig()

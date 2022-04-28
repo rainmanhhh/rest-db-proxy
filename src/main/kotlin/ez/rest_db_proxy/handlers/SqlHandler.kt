@@ -28,9 +28,9 @@ class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
     if (ctx.response().ended()) return false
     val address = ctx.normalizedPath()
     val paramJson = ctx.paramsAsJson()
-    logger.debug("SqlHandler address: {}, paramJson: {}", address, paramJson)
+    logger.debug("req path: {}, paramJson: {}", address, paramJson)
     val sql = sendMessage(address, paramJson, StringRes::class.java).check()
-    logger.debug("SqlHandler sql: {}", sql)
+    logger.debug("generated sql: {}", sql)
     if (sql == null) {
       ctx.fail(HttpException.internalErr("generated sql is null! req path:[$address]"))
     } else {

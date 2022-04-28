@@ -1,9 +1,9 @@
 package ez.rest_db_proxy.config
 
-import io.vertx.core.VertxOptions
-
-class VertxConfigVerticle : ConfigVerticle<VertxOptions>() {
+class VertxConfigVerticle : ConfigVerticle<VertxConfig>() {
   override val key = "vertx"
-  override var configValue = VertxOptions()
-  override suspend fun afterConfig() = Unit
+  override var configValue = VertxConfig()
+  override suspend fun afterConfig() {
+    VertxConfig.value = configValue
+  }
 }
