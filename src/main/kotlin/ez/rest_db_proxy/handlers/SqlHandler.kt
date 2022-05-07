@@ -1,15 +1,16 @@
 package ez.rest_db_proxy.handlers
 
+import ez.rest_db_proxy.db.DbClientVerticle
 import ez.rest_db_proxy.err.HttpException
 import ez.rest_db_proxy.message.req.SqlReq
 import ez.rest_db_proxy.message.res.ListRes
-import ez.rest_db_proxy.message.res.StringRes
+import ez.rest_db_proxy.message.res.MapRes
 import ez.rest_db_proxy.message.res.check
 import ez.rest_db_proxy.message.sendMessage
 import ez.rest_db_proxy.paramsAsJson
-import ez.rest_db_proxy.db.DbClientVerticle
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import io.vertx.kotlin.coroutines.await
 import kotlinx.coroutines.CoroutineScope
@@ -29,14 +30,15 @@ class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
     val address = ctx.normalizedPath()
     val paramJson = ctx.paramsAsJson()
     logger.debug("req path: {}, paramJson: {}", address, paramJson)
-    val sql = sendMessage(address, paramJson, StringRes::class.java).check()
-    logger.debug("generated sql: {}", sql)
-    if (sql == null) {
-      ctx.fail(HttpException.internalErr("generated sql is null! req path:[$address]"))
+    val mapRes = sendMessage(address, paramJson, MapRes::class.java).check()
+    logger.debug("generated mapRes: {}", mapRes)
+    val sqlReq = JsonObject(mapRes).mapTo(SqlReq::class.java)
+    if (sqlReq.sql.isBlank()) {
+      ctx.fail(HttpException.internalErr("generated sql is empty! req path:[$address]"))
     } else {
       val jsonArray = sendMessage(
         DbClientVerticle.messageExecuteSql,
-        SqlReq(sql, paramJson.map),
+        sqlReq,
         ListRes::class.java
       ).check()
       ctx.response().putHeader(
