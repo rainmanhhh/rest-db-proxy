@@ -14,7 +14,7 @@ abstract class GenerateSqlVerticle : CoroutineVerticle() {
       )
     receiveMessage(p) {
       SqlReq(
-        generateSql(it).trim().replace('\n', ' '),
+        generateSql(it).trim(),
         it.map
       )
     }
