@@ -1,6 +1,6 @@
 package ez.rest_db_proxy.message.req
 
-class SqlReq(
+class SqlReqBody(
   val sql: String,
   val params: Map<String, Any?>
 ) {

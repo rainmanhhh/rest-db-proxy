@@ -2,12 +2,13 @@ package ez.rest_db_proxy.handlers
 
 import ez.rest_db_proxy.db.DbClientVerticle
 import ez.rest_db_proxy.err.HttpException
-import ez.rest_db_proxy.message.req.SqlReq
+import ez.rest_db_proxy.message.req.SqlReqBody
 import ez.rest_db_proxy.message.res.ListRes
 import ez.rest_db_proxy.message.res.MapRes
 import ez.rest_db_proxy.message.res.check
 import ez.rest_db_proxy.message.sendMessage
 import ez.rest_db_proxy.paramsAsJson
+import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
@@ -28,18 +29,20 @@ class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
   override suspend fun handleAsync(ctx: RoutingContext): Boolean {
     if (ctx.response().ended()) return false
     val address = ctx.normalizedPath()
+    val httpMethod = ctx.request().method().name()
     val paramJson = ctx.paramsAsJson()
-    logger.debug("req path: {}, paramJson: {}", address, paramJson)
+    logger.debug("req path: {}, httpMethod: {}, paramJson: {}", address, httpMethod, paramJson)
     val mapRes = sendMessage(address, paramJson, MapRes::class.java).check()
     logger.debug("generated mapRes: {}", mapRes)
-    val sqlReq = JsonObject(mapRes).mapTo(SqlReq::class.java)
-    if (sqlReq.sql.isBlank()) {
-      ctx.fail(HttpException.internalErr("generated sql is empty! req path:[$address]"))
+    val sqlReqBody = JsonObject(mapRes).mapTo(SqlReqBody::class.java)
+    if (sqlReqBody.sql.isEmpty()) {
+      ctx.fail(HttpException.internalErr("generated sql is empty! req path:[$address], httpMethod:[$httpMethod]"))
     } else {
       val jsonArray = sendMessage(
         DbClientVerticle.messageExecuteSql,
-        sqlReq,
-        ListRes::class.java
+        sqlReqBody,
+        ListRes::class.java,
+        DeliveryOptions().addHeader("httpMethod", httpMethod)
       ).check()
       ctx.response().putHeader(
         HttpHeaders.CONTENT_TYPE, "application/json;charset=utf-8"

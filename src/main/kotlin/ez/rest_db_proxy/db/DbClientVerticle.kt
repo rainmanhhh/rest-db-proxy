@@ -2,7 +2,7 @@ package ez.rest_db_proxy.db
 
 import ez.rest_db_proxy.config.ConfigVerticle
 import ez.rest_db_proxy.message.receiveMessage
-import ez.rest_db_proxy.message.req.SqlReq
+import ez.rest_db_proxy.message.req.SqlReqBody
 import ez.rest_db_proxy.verticle.AutoDeployVerticle
 import io.vertx.kotlin.coroutines.await
 import io.vertx.sqlclient.SqlClient
@@ -15,8 +15,8 @@ abstract class DbClientVerticle<C : Any> : AutoDeployVerticle, ConfigVerticle<C>
 
   override suspend fun afterConfig() {
     dbClient = createDbClient()
-    receiveMessage(messageExecuteSql, SqlReq::class.java) {
-      executeSql(it)
+    receiveMessage(messageExecuteSql, SqlReqBody::class.java) {
+      executeSql(it.body)
     }
   }
 
@@ -28,7 +28,7 @@ abstract class DbClientVerticle<C : Any> : AutoDeployVerticle, ConfigVerticle<C>
     return first.trimStart().lowercase().startsWith("select")
   }
 
-  private suspend fun executeSql(req: SqlReq) =
+  private suspend fun executeSql(req: SqlReqBody) =
     if (isQuery(req.sql)) {
       SqlTemplate.forQuery(dbClient, req.sql).execute(req.params)
         .await()
