@@ -74,8 +74,10 @@ fun CoroutineScope.receiveMessage(
   MessageEx.logger.debug("register message handler for address: {}", address)
   val vertx = VertxUtil.vertx()
   vertx.eventBus().consumer<JsonObject>(address) {
-    val method = it.headers().get("method") ?: "get"
-    MessageEx.logger.debug("received message at address: {}, method: {}, body: {}", address, method, it.body())
+    if (MessageEx.logger.isDebugEnabled) {
+      val httpMethod = it.headers()["httpMethod"]
+      MessageEx.logger.debug("received message at address: {}, httpMethod: {}, body: {}", address, httpMethod, it.body())
+    }
     handleReq(it, Req(it.headers(), it.body()), handler)
   }
 }

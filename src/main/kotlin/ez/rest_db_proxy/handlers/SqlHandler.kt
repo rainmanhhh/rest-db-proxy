@@ -32,7 +32,8 @@ class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
     val httpMethod = ctx.request().method().name()
     val paramJson = ctx.paramsAsJson()
     logger.debug("req path: {}, httpMethod: {}, paramJson: {}", address, httpMethod, paramJson)
-    val mapRes = sendMessage(address, paramJson, MapRes::class.java).check()
+    val deliveryOptions = DeliveryOptions().addHeader("httpMethod", httpMethod)
+    val mapRes = sendMessage(address, paramJson, MapRes::class.java, deliveryOptions).check()
     logger.debug("generated mapRes: {}", mapRes)
     val sqlReqBody = JsonObject(mapRes).mapTo(SqlReqBody::class.java)
     if (sqlReqBody.sql.isEmpty()) {
@@ -42,7 +43,7 @@ class SqlHandler(scope: CoroutineScope) : CoroutineHandler(scope) {
         DbClientVerticle.messageExecuteSql,
         sqlReqBody,
         ListRes::class.java,
-        DeliveryOptions().addHeader("httpMethod", httpMethod)
+        deliveryOptions
       ).check()
       ctx.response().putHeader(
         HttpHeaders.CONTENT_TYPE, "application/json;charset=utf-8"
