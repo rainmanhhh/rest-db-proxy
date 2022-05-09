@@ -9,6 +9,7 @@ import ez.rest_db_proxy.config.ConfigVerticle
 import ez.rest_db_proxy.config.HttpServerConfig
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServer
 import io.vertx.core.json.Json
 import io.vertx.ext.web.Router
@@ -54,7 +55,11 @@ class HttpServerVerticle : ConfigVerticle<HttpServerConfig>() {
     logger.info("starting httpServer...")
     router.route().handler(TimeoutHandler.create(configValue.timeout))
     router.route().handler(LoggerHandler.create())
-    router.post().handler(BodyHandler.create())
+    router.route()
+      .method(HttpMethod.POST)
+      .method(HttpMethod.PUT)
+      .method(HttpMethod.PATCH)
+      .handler(BodyHandler.create())
     router.get("/favicon.ico").handler(FaviconHandler.create(vertx))
     router.get("/").handler(this::handleAdminHtml)
     router.post("/_admin/deploy").handler(DeployHandler(this))
