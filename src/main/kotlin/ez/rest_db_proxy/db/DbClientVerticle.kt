@@ -1,19 +1,20 @@
 package ez.rest_db_proxy.db
 
-import ez.rest_db_proxy.config.ConfigVerticle
-import ez.rest_db_proxy.message.receiveMessage
 import ez.rest_db_proxy.message.req.SqlReqBody
-import ez.rest_db_proxy.verticle.AutoDeployVerticle
+import ez.vertx.core.AutoDeployVerticle
+import ez.vertx.core.busi.BusiVerticle
+import ez.vertx.core.message.receiveMessage
 import io.vertx.kotlin.coroutines.await
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.templates.SqlTemplate
 
-abstract class DbClientVerticle<C : Any> : AutoDeployVerticle, ConfigVerticle<C>() {
+abstract class DbClientVerticle : AutoDeployVerticle, BusiVerticle<List<Any?>>() {
   private lateinit var dbClient: SqlClient
 
   abstract suspend fun createDbClient(): SqlClient
 
-  override suspend fun afterConfig() {
+  override suspend fun start() {
+    super.start()
     dbClient = createDbClient()
     receiveMessage(messageExecuteSql, SqlReqBody::class.java) {
       executeSql(it.body)

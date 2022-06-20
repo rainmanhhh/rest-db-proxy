@@ -1,7 +1,7 @@
 package ez.rest_db_proxy.db
 
-import ez.rest_db_proxy.message.receiveMessage
 import ez.rest_db_proxy.message.req.SqlReqBody
+import ez.vertx.core.message.receiveMessage
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
