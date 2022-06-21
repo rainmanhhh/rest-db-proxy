@@ -3,6 +3,7 @@ package ez.rest_db_proxy.db
 import ez.rest_db_proxy.message.req.SqlReqBody
 import ez.vertx.core.AutoDeployVerticle
 import ez.vertx.core.busi.BusiVerticle
+import ez.vertx.core.err.HttpException
 import ez.vertx.core.message.receiveMessage
 import io.vertx.kotlin.coroutines.await
 import io.vertx.sqlclient.SqlClient
@@ -22,7 +23,9 @@ abstract class DbClientVerticle : AutoDeployVerticle, BusiVerticle<List<Any?>>()
   }
 
   private fun isQuery(s: String): Boolean {
-    val first = s.lines().first {
+    val first = s.trim().apply {
+      if (this.isEmpty()) throw HttpException.badRequest("sql is empty")
+    }.lines().first {
       val trimmed = it.trim()
       !trimmed.startsWith("--") && trimmed.isNotEmpty()
     }

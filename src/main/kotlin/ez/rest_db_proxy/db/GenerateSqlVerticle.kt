@@ -2,10 +2,12 @@ package ez.rest_db_proxy.db
 
 import ez.rest_db_proxy.message.req.SqlReqBody
 import ez.vertx.core.message.receiveMessage
+import ez.vertx.core.message.res.SimpleRes
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 
+@Suppress("unused")
 abstract class GenerateSqlVerticle : CoroutineVerticle() {
   override suspend fun start() {
     val p = path() ?: throw NullPointerException(javaClass.name + ".path should not return null")
@@ -16,9 +18,12 @@ abstract class GenerateSqlVerticle : CoroutineVerticle() {
     receiveMessage(p) {
       val httpMethod = it.headers["httpMethod"]?.let(HttpMethod::valueOf)
       val sql = generateSql(httpMethod, it.body).trim()
-      SqlReqBody(
-        sql,
-        it.body.map
+      SimpleRes.continueTo(
+        DbClientVerticle.messageExecuteSql,
+        SqlReqBody(
+          sql,
+          it.body.map
+        )
       )
     }
   }
